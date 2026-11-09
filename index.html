@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shhh… a secret invitation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500;1,6..96,500&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#FFF1F5; --ink:#2A1033; --muted:#6E4A78; --card:#FFFFFF; --line:#E9C9D8;
+  --pink:#C2287A; --gold:#C99A3B; --on-pink:#FFFFFF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#1E0A26; --ink:#FFEAF2; --muted:#C9A2D3; --card:#2E1238; --line:#4D2A5A;
+    --pink:#F062A8; --gold:#E9C77B; --on-pink:#2A1033;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#1E0A26; --ink:#FFEAF2; --muted:#C9A2D3; --card:#2E1238; --line:#4D2A5A;
+  --pink:#F062A8; --gold:#E9C77B; --on-pink:#2A1033;
+}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:17px;line-height:1.5;
+  display:flex;justify-content:center;
+}
+main{width:100%;max-width:440px;padding:40px 22px 48px;text-align:center}
+.hush{
+  font-family:"Bodoni Moda",Georgia,"Times New Roman",serif;
+  font-style:italic;font-weight:500;
+  font-size:clamp(46px,15vw,66px);line-height:1;margin:8px 0 14px;
+  color:var(--pink);letter-spacing:-.01em;
+}
+.lead{margin:0 auto 28px;max-width:30ch;color:var(--muted)}
+.card{
+  position:relative;border-radius:22px;background:var(--card);
+  border:1.5px solid var(--line);overflow:hidden;text-align:left;
+  min-height:360px;
+}
+.details{padding:28px 24px 26px}
+.for{margin:0;color:var(--muted);font-size:15px}
+.bride{
+  font-family:"Bodoni Moda",Georgia,serif;font-weight:500;
+  font-size:36px;line-height:1.1;margin:4px 0 4px;
+}
+.event{margin:0 0 20px;color:var(--pink);font-weight:600}
+dl{margin:0;display:grid;grid-template-columns:92px 1fr;row-gap:12px;column-gap:10px;
+  border-top:1px solid var(--line);padding-top:18px}
+dt{color:var(--muted);font-size:15px}
+dd{margin:0;font-weight:600}
+.note{margin:20px 0 0;color:var(--muted);font-size:15px}
+canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  touch-action:none;cursor:grab;transition:opacity .7s ease;
+}
+canvas.gone{opacity:0;pointer-events:none}
+.hint{margin:14px 0 0;color:var(--muted);font-size:15px;min-height:1.5em}
+.actions{margin-top:22px;display:grid;gap:12px}
+.btn{
+  display:block;width:100%;padding:15px 18px;border-radius:999px;border:0;
+  font:600 17px "Figtree",system-ui,sans-serif;text-decoration:none;cursor:pointer;
+  background:var(--pink);color:var(--on-pink);
+}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.after{opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .6s ease .3s,transform .6s ease .3s}
+.after.show{opacity:1;transform:none;pointer-events:auto}
+@media (prefers-reduced-motion: reduce){
+  canvas,.after{transition:none}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1 class="hush">Shhh…</h1>
+  <p class="lead">This one is only for the girl gang. Scratch the gold to see what we’ve planned.</p>
+
+  <section class="card" id="card" aria-label="Invitation details">
+    <div class="details">
+      <p class="for">You’re invited to the bride-to-be party for</p>
+      <h2 class="bride" id="bride"></h2>
+      <p class="event" id="event"></p>
+      <dl>
+        <dt>Date</dt><dd id="date"></dd>
+        <dt>Time</dt><dd id="time"></dd>
+        <dt>Venue</dt><dd id="venue"></dd>
+        <dt>Dress code</dt><dd id="dress"></dd>
+      </dl>
+      <p class="note" id="note"></p>
+    </div>
+    <canvas id="foil" aria-hidden="true"></canvas>
+  </section>
+
+  <p class="hint" id="hint">Use your finger to scratch</p>
+
+  <div class="actions">
+    <button class="btn ghost" id="skip" type="button">Can’t scratch? Show me</button>
+    <div class="after" id="after">
+      <a class="btn" id="rsvp" href="#" target="_blank" rel="noopener">Count me in on WhatsApp</a>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ===== Edit these details ===== */
+var INVITE = {
+  bride: "Hanna",
+  event: "Bride-to-be party",
+  date: "Saturday, 5 December",
+  time: "2:00 PM",
+  venue: "Leher Cafe",
+  dress: "Off-white or pastels",
+  note: "The wedding is on 12 and 13 December. Keep this between us until the day.",
+  rsvpNumber: "" /* digits only with country code, e.g. 919XXXXXXXXX. Leave empty to let guests pick a contact. */
+};
+/* ============================== */
+
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  $("bride").textContent = INVITE.bride;
+  $("event").textContent = INVITE.event;
+  $("date").textContent = INVITE.date;
+  $("time").textContent = INVITE.time;
+  $("venue").textContent = INVITE.venue;
+  $("dress").textContent = INVITE.dress;
+  $("note").textContent = INVITE.note;
+  var msg = "I’m in for " + INVITE.bride + "’s bride-to-be party!";
+  $("rsvp").href = "https://wa.me/" + INVITE.rsvpNumber + "?text=" + encodeURIComponent(msg);
+
+  var card = $("card"), cv = $("foil"), ctx = cv.getContext("2d");
+  var w = 0, h = 0, done = false, drawing = false, last = null;
+
+  function paintFoil(){
+    var dpr = window.devicePixelRatio || 1;
+    w = card.clientWidth; h = card.clientHeight;
+    cv.width = w * dpr; cv.height = h * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    var g = ctx.createLinearGradient(0,0,w,h);
+    g.addColorStop(0,"#B8862B"); g.addColorStop(.35,"#F3D98B");
+    g.addColorStop(.6,"#C99A3B"); g.addColorStop(1,"#EBCB78");
+    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+    for (var i=0;i<900;i++){
+      ctx.fillStyle = "rgba(255,255,255," + (Math.random()*.12) + ")";
+      ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
+    }
+    ctx.fillStyle = "#5A3A08";
+    ctx.textAlign = "center";
+    ctx.font = "italic 500 30px 'Bodoni Moda', Georgia, serif";
+    ctx.fillText("Scratch here", w/2, h/2 - 6);
+    ctx.font = "600 15px Figtree, system-ui, sans-serif";
+    ctx.fillText("Only for the girl gang", w/2, h/2 + 24);
+  }
+
+  function pos(e){
+    var r = cv.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function scratch(p){
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.lineWidth = 46; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath();
+    var s = last || p;
+    ctx.moveTo(s.x, s.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p;
+  }
+  function cleared(){
+    var dpr = window.devicePixelRatio || 1;
+    var d = ctx.getImageData(0,0,cv.width,cv.height).data, n = 0, t = 0;
+    for (var i=3;i<d.length;i+=64){ t++; if (d[i] === 0) n++; }
+    return n / t;
+  }
+  function reveal(){
+    if (done) return;
+    done = true;
+    cv.classList.add("gone");
+    $("skip").style.display = "none";
+    $("hint").textContent = "See you there!";
+    $("after").classList.add("show");
+  }
+
+  cv.addEventListener("pointerdown", function(e){
+    drawing = true; last = null; cv.setPointerCapture(e.pointerId);
+    scratch(pos(e)); $("hint").textContent = "Keep going…";
+  });
+  cv.addEventListener("pointermove", function(e){ if (drawing) scratch(pos(e)); });
+  function end(){
+    if (!drawing) return;
+    drawing = false; last = null;
+    if (cleared() > 0.4) reveal();
+  }
+  cv.addEventListener("pointerup", end);
+  cv.addEventListener("pointercancel", end);
+  $("skip").addEventListener("click", reveal);
+
+  paintFoil();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ if(!done && !drawing) paintFoil(); });
+  var rt;
+  window.addEventListener("resize", function(){
+    clearTimeout(rt);
+    rt = setTimeout(function(){ if (!done && !drawing) paintFoil(); }, 150);
+  });
+})();
+</script>
+</body>
+</html>
