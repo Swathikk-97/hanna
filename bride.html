@@ -456,15 +456,105 @@
       outline-offset: 3px
     }
 
-    /* ---- Step 4: done ---- */
-    .chosen {
-      display: inline-block;
-      margin: 6px 0 20px;
-      padding: 14px 22px;
-      border-radius: 18px;
+    /* ---- Step 4: scratch reveal ---- */
+    .reveal-card {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 250px;
+      margin: 6px 0 12px;
+      overflow: hidden;
+      border-radius: 14px;
       background: var(--card);
       border: 1.5px solid var(--line);
-      font-size: 24px;
+    }
+
+    .reveal-content {
+      width: 100%;
+      padding: 18px 22px;
+      background: var(--pink-soft);
+    }
+
+    .reveal-kicker {
+      margin: 0;
+      color: var(--pink);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .chosen {
+      margin: 4px 0 12px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .reveal-details {
+      display: grid;
+      grid-template-columns: 62px minmax(0, 1fr);
+      gap: 5px 10px;
+      margin: 0;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      text-align: left;
+      font-size: 15px;
+    }
+
+    .reveal-details dt {
+      color: var(--muted);
+    }
+
+    .reveal-details dd {
+      min-width: 0;
+      font-weight: 600;
+    }
+
+    .reveal-note {
+      margin: 12px 0 0;
+      color: var(--pink);
+      font-size: 15px;
+    }
+
+    #scratch {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+      transition: opacity .7s ease;
+    }
+
+    #scratch.gone {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .scratch-hint {
+      min-height: 1.5em;
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .scratch-skip {
+      padding: 4px 8px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 15px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .reveal-after {
+      display: none;
+    }
+
+    .reveal-after.show {
+      display: block;
+      animation: rise .6s ease both;
     }
 
     #confetti {
@@ -480,11 +570,17 @@
 
       .gift,
       .day.booked svg,
-      .step.on {
+      .step.on,
+      #scratch,
+      .reveal-after.show {
         animation: none
       }
 
       .gift .lid {
+        transition: none
+      }
+
+      #scratch {
         transition: none
       }
     }
@@ -542,14 +638,33 @@
       <button class="btn" id="confirm" type="button" disabled>Pick a date</button>
     </section>
 
-    <!-- 4. Done -->
+    <!-- 4. Scratch reveal -->
     <section class="step" id="s4">
-      <h1 class="big serif">It’s a date!</h1>
-      <div class="chosen serif" id="chosen"></div>
-      <p class="lead">Tell the girls so they can start planning.</p>
-      <a class="btn" id="send" href="#" target="_blank" rel="noopener">Send my date on WhatsApp</a>
-      <button class="btn" id="change" type="button"
-        style="background:transparent;color:var(--ink);border:1.5px solid var(--line)">Change date</button>
+      <h1 class="big serif">Scratch to reveal!</h1>
+      <div class="reveal-card" aria-label="Your selected party date">
+        <div class="reveal-content" id="revealContent" aria-hidden="true">
+          <p class="reveal-kicker">A celebration just for you</p>
+          <p class="chosen serif" id="chosen"></p>
+          <dl class="reveal-details">
+            <dt>Time</dt>
+            <dd id="partyTime"></dd>
+            <dt>Place</dt>
+            <dd id="partyVenue"></dd>
+            <dt>Wear</dt>
+            <dd id="partyDress"></dd>
+          </dl>
+          <p class="reveal-note serif">A little love for the girl who makes every day brighter.</p>
+        </div>
+        <canvas id="scratch" aria-hidden="true"></canvas>
+      </div>
+      <p class="scratch-hint" id="scratchHint">Scratch to reveal your celebration</p>
+      <button class="scratch-skip" id="scratchSkip" type="button">Can’t scratch? Show me</button>
+      <div class="reveal-after" id="revealAfter">
+        <p class="lead" id="celebrateCopy"></p>
+        <a class="btn" id="send" href="#" target="_blank" rel="noopener">Send my date on WhatsApp</a>
+        <button class="btn" id="change" type="button"
+          style="background:transparent;color:var(--ink);border:1.5px solid var(--line)">Change date</button>
+      </div>
     </section>
 
   </main>
@@ -559,6 +674,9 @@
     var SURPRISE = {
       bride: "Hanna",
       intro: "A little reminder of how loved you are, from all of us.",
+      partyTime: "7:00 PM",
+      partyVenue: "Leher Cafe",
+      partyDress: "Off-white or pastels",
       /* Put images and videos in the "media" folder next to this file. */
       photos: [
         { src: "media/hanna.7.jpeg", caption: "Where it all started" },
@@ -583,16 +701,20 @@
 
       $("name1").textContent = SURPRISE.bride;
       $("intro").textContent = SURPRISE.intro;
+      $("partyTime").textContent = SURPRISE.partyTime;
+      $("partyVenue").textContent = SURPRISE.partyVenue;
+      $("partyDress").textContent = SURPRISE.partyDress;
+      $("celebrateCopy").textContent = SURPRISE.bride + ", your girls adore you. We can’t wait to celebrate and spoil you!";
 
       /* ---------- Confetti ---------- */
       var cv = $("confetti"), cx = cv.getContext("2d"), bits = [], raf = null;
-      function confetti() {
+      function confetti(count) {
         if (reduce) return;
         var dpr = window.devicePixelRatio || 1;
         cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
         cx.setTransform(dpr, 0, 0, dpr, 0, 0);
         var cols = ["#C2287A", "#F062A8", "#E9C77B", "#FBD9E8", "#C99A3B"];
-        for (var i = 0; i < 140; i++) {
+        for (var i = 0; i < (count || 140); i++) {
           bits.push({
             x: innerWidth / 2, y: innerHeight * 0.4,
             vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4,
@@ -620,6 +742,95 @@
         });
         raf = bits.length ? requestAnimationFrame(tick) : null;
       }
+
+      var scratchCv = $("scratch"), scratchCtx = scratchCv.getContext("2d");
+      var scratchWidth = 0, scratchHeight = 0, scratchDone = false, scratching = false, lastPoint = null;
+
+      function paintScratch() {
+        var dpr = window.devicePixelRatio || 1;
+        scratchWidth = scratchCv.clientWidth;
+        scratchHeight = scratchCv.clientHeight;
+        if (!scratchWidth || !scratchHeight) return;
+        scratchCv.width = scratchWidth * dpr;
+        scratchCv.height = scratchHeight * dpr;
+        scratchCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        var gradient = scratchCtx.createLinearGradient(0, 0, scratchWidth, scratchHeight);
+        gradient.addColorStop(0, "#F4A8C7");
+        gradient.addColorStop(.3, "#FFD0B8");
+        gradient.addColorStop(.58, "#DCC9F5");
+        gradient.addColorStop(.8, "#BFE9D8");
+        gradient.addColorStop(1, "#F4A8C7");
+        scratchCtx.fillStyle = gradient;
+        scratchCtx.fillRect(0, 0, scratchWidth, scratchHeight);
+        for (var i = 0; i < 500; i++) {
+          scratchCtx.fillStyle = "rgba(255,255,255," + (Math.random() * .14) + ")";
+          scratchCtx.fillRect(Math.random() * scratchWidth, Math.random() * scratchHeight, 2, 2);
+        }
+        scratchCtx.fillStyle = "#6E315E";
+        scratchCtx.textAlign = "center";
+        scratchCtx.font = "italic 500 25px 'Bodoni Moda', Georgia, serif";
+        scratchCtx.fillText("Scratch to reveal", scratchWidth / 2, scratchHeight / 2 + 8);
+      }
+
+      function scratchPosition(event) {
+        var rect = scratchCv.getBoundingClientRect();
+        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      }
+
+      function scratchAt(point) {
+        scratchCtx.globalCompositeOperation = "destination-out";
+        scratchCtx.lineWidth = 42;
+        scratchCtx.lineCap = "round";
+        scratchCtx.lineJoin = "round";
+        scratchCtx.beginPath();
+        var start = lastPoint || point;
+        scratchCtx.moveTo(start.x, start.y);
+        scratchCtx.lineTo(point.x, point.y);
+        scratchCtx.stroke();
+        lastPoint = point;
+      }
+
+      function scratchCoverage() {
+        var pixels = scratchCtx.getImageData(0, 0, scratchCv.width, scratchCv.height).data;
+        var cleared = 0, sampled = 0;
+        for (var i = 3; i < pixels.length; i += 64) {
+          sampled++;
+          if (pixels[i] === 0) cleared++;
+        }
+        return cleared / sampled;
+      }
+
+      function revealDate() {
+        if (scratchDone) return;
+        scratchDone = true;
+        scratchCv.classList.add("gone");
+        $("revealContent").removeAttribute("aria-hidden");
+        $("scratchSkip").style.display = "none";
+        $("scratchHint").textContent = "It’s a date!";
+        $("revealAfter").classList.add("show");
+        confetti(45);
+      }
+
+      scratchCv.addEventListener("pointerdown", function (event) {
+        if (scratchDone) return;
+        scratching = true;
+        lastPoint = null;
+        scratchCv.setPointerCapture(event.pointerId);
+        scratchAt(scratchPosition(event));
+        $("scratchHint").textContent = "Keep going…";
+      });
+      scratchCv.addEventListener("pointermove", function (event) {
+        if (scratching) scratchAt(scratchPosition(event));
+      });
+      function endScratch() {
+        if (!scratching) return;
+        scratching = false;
+        lastPoint = null;
+        if (scratchCoverage() > .4) revealDate();
+      }
+      scratchCv.addEventListener("pointerup", endScratch);
+      scratchCv.addEventListener("pointercancel", endScratch);
+      $("scratchSkip").addEventListener("click", revealDate);
 
       /* ---------- 1. Gift ---------- */
       $("gift").addEventListener("click", function () {
@@ -738,11 +949,23 @@
         if (!picked) return;
         var nice = parse(picked).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
         $("chosen").textContent = nice;
+        $("revealContent").setAttribute("aria-hidden", "true");
+        $("scratchHint").textContent = "Scratch to reveal your celebration";
+        $("scratchSkip").style.display = "";
+        $("revealAfter").classList.remove("show");
+        scratchCv.classList.remove("gone");
+        scratchDone = false;
         var text = "I picked " + nice + " for my bride-to-be party! 💕";
         $("send").href = "https://wa.me/" + SURPRISE.sendTo + "?text=" + encodeURIComponent(text);
-        show("s4"); confetti();
+        show("s4");
+        requestAnimationFrame(paintScratch);
+        confetti();
       });
       $("change").addEventListener("click", function () { show("s3"); });
+
+      window.addEventListener("resize", function () {
+        if (!scratchDone && !scratching && $("s4").classList.contains("on")) paintScratch();
+      });
 
       render();
     })();
